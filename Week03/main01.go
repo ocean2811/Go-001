@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -14,10 +15,7 @@ import (
 //1. 基于 errgroup 实现一个 http server 的启动和关闭 ，以及 linux signal 信号的注册和处理，要保证能够 一个退出，全部注销退出
 
 func main() {
-	signalCtx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	group, ctx := errgroup.WithContext(signalCtx)
+	group, ctx := errgroup.WithContext(context.Background())
 	group.Go(func() error {
 		return Serve(ctx, ":10001")
 	})
@@ -25,13 +23,18 @@ func main() {
 		return Serve(ctx, ":10002")
 	})
 
-	sigC := make(chan os.Signal, 1)
-	signal.Notify(sigC, os.Interrupt)
-	go func() {
-		<-sigC
-		fmt.Println("SIGINT!")
-		cancel()
-	}()
+	group.Go(func() error {
+		sigC := make(chan os.Signal, 1)
+		signal.Notify(sigC, os.Interrupt)
+		select {
+		case <-sigC:
+			fmt.Println("SIGINT!")
+			return errors.New("Stop by SIGINT")
+
+		case <-ctx.Done():
+			return nil
+		}
+	})
 
 	err := group.Wait()
 	fmt.Printf("Exit: %+v\n", err)
@@ -43,12 +46,20 @@ func Serve(ctx context.Context, addr string) error {
 		fmt.Fprintf(w, "Listen: %s", addr)
 	})}
 
-	go func() {
-		<-ctx.Done()
+	errC := make(chan error, 1)
+	go func() { errC <- svr.ListenAndServe() }()
+
+	var err error
+	select {
+	case err = <-errC:
+		fmt.Printf("Server %s down! err=%+v\n", addr, err)
+
+	case <-ctx.Done():
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
 		svr.Shutdown(shutdownCtx)
-	}()
+		fmt.Printf("Server %s Shutdown!\n", addr)
+	}
 
-	return svr.ListenAndServe()
+	return err
 }
