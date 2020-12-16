@@ -1,7 +1,7 @@
 package data
 
 import (
-	"math/rand"
+	"time"
 
 	"github.com/pkg/errors"
 )
@@ -15,7 +15,7 @@ func NewRedis(addr string) DataOperator {
 }
 
 func (redis *redisUserInfoClient) GetUserInfo(id string) (*UserInfo, error) {
-	if rand.Int() < 0 {
+	if time.Now().Unix()%2 == 0 {
 		//data access has error
 		return nil, errors.WithMessagef(ErrUserNotFound, "user_id=%s", id)
 	}

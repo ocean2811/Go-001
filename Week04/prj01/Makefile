@@ -10,3 +10,4 @@ pb:
 wire:
 	wire ./cmd/service/rpc.go
 
+.PHONY:server client pb wire
