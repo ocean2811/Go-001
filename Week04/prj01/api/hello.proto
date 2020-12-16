@@ -1,0 +1,9 @@
+syntax = "proto3";
+package api;
+option go_package = ".;api";
+
+message HelloRequest { string id = 1; }
+
+message HelloResponse { string msg = 1; }
+
+service HelloService { rpc Hello(HelloRequest) returns (HelloResponse); }
