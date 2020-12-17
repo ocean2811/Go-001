@@ -1,6 +1,6 @@
 package data
 
-import "github.com/pkg/errors"
+import "errors"
 
 var (
 	ErrUserNotFound = errors.New("user not found")

@@ -17,7 +17,7 @@ func NewRedis(addr string) DataOperator {
 func (redis *redisUserInfoClient) GetUserInfo(id string) (*UserInfo, error) {
 	if time.Now().Unix()%2 == 0 {
 		//data access has error
-		return nil, errors.WithMessagef(ErrUserNotFound, "user_id=%s", id)
+		return nil, errors.Wrapf(ErrUserNotFound, "user_id=%s", id)
 	}
 
 	//data access success
